@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A.U.R.O.R.A. Misión 2: Optimización Estratégica</title>
-    <link href="https://fonts.googleapis.com/css2?family=VT323:wght@400&display=swap" rel="stylesheet">
+    <title>A.U.R.O.R.A. Misión 2: Calibración de Secuencia</title>
+    
+    <!-- CAMBIO: Se importa la fuente Roboto y se mantiene VT323 para el editor de código -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&family=VT323&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -43,8 +48,15 @@
         <!-- Header -->
         <header class="app-header">
             <div class="header-content">
-                <h1 class="mission-title">A.U.R.O.R.A. MISIÓN 2: OPTIMIZACIÓN ESTRATÉGICA</h1>
-                <div class="mission-subtitle">Especialista en Operaciones de Campo - Nivel Secundaria</div>
+                <!-- Contenedor para título y subtítulo -->
+                <div class="header-text">
+                    <h1 class="mission-title">Misión 2: Calibración de Secuencia</h1>
+                    <div class="mission-subtitle">Especialista en Operaciones de Campo - Nivel Secundaria</div>
+                </div>
+                <!-- CAMBIO: Cronómetro añadido -->
+                <div id="mission-timer" class="mission-timer">00:00</div>
+            </div>
+            <div class="status-indicators-wrapper">
                 <div class="status-indicators">
                     <span class="status-led active" id="system-status">SISTEMA</span>
                     <span class="status-led" id="connection-status">CONEXIÓN</span>
