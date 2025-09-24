@@ -165,6 +165,7 @@
         .legend-symbol.objective-M { color: #e3b341; border: 1px solid #e3b341;}
         .legend-symbol.objective-A { color: #56d364; border: 1px solid #56d364;}
         .legend-symbol.hidden { background-color: #333; color: #666; }
+        .legend-symbol.obstacle { background-color: #475569; color: #94a3b8;}
         .legend-text { font-family: var(--font-family-base); color: #ccc; font-size: 0.9rem; }
 
         .command-bank h3, .sequence-area h3 { color: #00ffff; margin-bottom: 0.5rem; font-size: 1.1rem; }
@@ -303,10 +304,11 @@
                 <div class="grid-container"><div id="tactical-grid" class="tactical-grid"></div></div>
                 <div class="map-legend">
                     <div class="legend-item"><span class="legend-symbol rover">►</span><span class="legend-text">A.U.R.O.R.A.</span></div>
-                    <div class="legend-item"><span class="legend-symbol objective-H">H</span><span class="legend-text">Muestra Hielo</span></div>
-                    <div class="legend-item"><span class="legend-symbol objective-M">M</span><span class="legend-text">Muestra Mineral</span></div>
-                    <div class="legend-item"><span class="legend-symbol objective-A">A</span><span class="legend-text">Estación Análisis</span></div>
-                    <div class="legend-item"><span class="legend-symbol hidden">?</span><span class="legend-text">Terreno Oculto</span></div>
+                    <div class="legend-item"><span class="legend-symbol objective-H">H</span><span class="legend-text">Hielo</span></div>
+                    <div class="legend-item"><span class="legend-symbol objective-M">M</span><span class="legend-text">Mineral</span></div>
+                    <div class="legend-item"><span class="legend-symbol objective-A">A</span><span class="legend-text">Estación</span></div>
+                    <!-- --- CAMBIO: Se añade obstáculo a la leyenda --- -->
+                    <div class="legend-item"><span class="legend-symbol obstacle">W</span><span class="legend-text">Obstáculo</span></div>
                 </div>
             </div>
         </section>
@@ -406,10 +408,20 @@
 
             const GRID_SIZE = 12;
             const gameConfig = {
+                // --- CAMBIO: Mapa con nueva posición de Mineral y obstáculos ---
                 map: [
-                    'S???????????', '?H??????M???', '????????????', '????????????',
-                    '????????????', '????????????', '????????????', '????????????',
-                    '????????????', '????????????', '????????????', '??????????A?',
+                    'S???????????', 
+                    '?H????WWWW??', 
+                    '????????W???', 
+                    'WWWW?????W??',
+                    '????????W???', 
+                    '????WWWWWW??', 
+                    '????????????', 
+                    '?????????M??',
+                    'W???????WW??', 
+                    'W???????????', 
+                    'WWWW?WWWW???', 
+                    '??????????A?',
                 ],
                 roverStart: { x: 0, y: 0, dir: 'E' },
                 scoreThresholds: { perfect: 15, good: 20 },
@@ -465,7 +477,7 @@
                         if (gameState.revealed[y][x] || isRover) {
                             if(isRover) gameState.revealed[y][x] = true;
                             cell.classList.add('revealed');
-                            if (tile === 'W') cell.style.backgroundColor = '#004d4d';
+                            if (tile === 'W') cell.style.backgroundColor = '#475569';
                             else if (tile !== '?' && tile !== 'S') {
                                 cell.classList.add(`objective-${tile}`);
                                 cell.textContent = tile;
@@ -690,7 +702,6 @@
                 dom.timer.textContent = `${minutes}:${seconds}:${milliseconds}`;
             }
             
-            // --- CAMBIO: Contenido del tutorial mejorado ---
             const tutorialSteps = [
                 { el: '.app-header', title: 'Nueva Misión: Calibración de Secuencia', desc: 'Especialista, esta misión es más compleja. Tu eficiencia será clave: el sistema medirá cada comando que uses. ¡Planifica con cuidado para obtener la máxima puntuación!' },
                 { el: '#tactical-panel', title: 'Paso 2: Visor Táctico', desc: '¡Atención al visor! Debes guiar a A.U.R.O.R.A. para recoger el Hielo (H), luego el Mineral (M), y finalmente llegar a la Estación de Análisis (A). ¡El orden es crítico!' },
