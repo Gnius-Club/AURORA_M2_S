@@ -4,188 +4,806 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>A.U.R.O.R.A. Misión 2: Calibración de Secuencia</title>
-    
-    <!-- CAMBIO: Se importa la fuente Roboto y se mantiene VT323 para el editor de código -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&family=VT323&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --font-family-base: "Roboto", sans-serif;
+            --font-family-mono: "VT323", monospace;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-base);
+            background-color: #0a0a0a;
+            color: #00ffff;
+            overflow: hidden;
+            height: 100vh;
+            font-size: 16px;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(transparent 50%, rgba(0, 255, 255, 0.03) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 3000;
+            animation: scanlines 0.1s linear infinite;
+        }
+
+        @keyframes scanlines {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(4px); }
+        }
+
+        .app-header {
+            background: linear-gradient(180deg, #001a1a 0%, #0a0a0a 100%);
+            border-bottom: 2px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            padding: 1rem 2rem;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+        }
+        .mission-title { font-size: 2rem; color: #00ffff; text-shadow: 0 0 10px rgba(0, 255, 255, 0.8); font-weight: 700; }
+        .mission-subtitle { font-size: 1rem; color: #00ff00; text-shadow: 0 0 5px rgba(0, 255, 0, 0.6); }
+        
+        .mission-timer {
+            font-family: var(--font-family-base);
+            font-size: 4rem;
+            color: #ff3838;
+            font-weight: 900;
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.8), 0 0 5px rgba(255, 100, 100, 0.5);
+            line-height: 1;
+            flex-shrink: 0;
+            animation: pulse-timer 2s infinite ease-in-out;
+        }
+        @keyframes pulse-timer {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .panel {
+            background: rgba(0, 20, 20, 0.8);
+            border: 2px solid #004d4d;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        .panel-header {
+            padding: 1rem;
+            border-bottom: 1px solid #004d4d;
+            background: rgba(0, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+        .panel-header h2 { font-size: 1.3rem; color: #00ffff; text-shadow: 0 0 5px rgba(0, 255, 255, 0.6); margin-bottom: 0.25rem; }
+        .panel-status { font-size: 0.9rem; color: #00ff00; opacity: 0.8; text-transform: uppercase; }
+        .panel-body {
+            padding: 1rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow: auto;
+        }
+
+        .tactical-panel { flex: 2; }
+        .sequencer-panel { flex: 3; }
+        .status-panel { flex: 1.5; }
+        
+        .grid-container { display: flex; justify-content: center; align-items: center; flex-grow: 1; }
+        .tactical-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: repeat(12, 1fr);
+            gap: 1px;
+            background: #004d4d;
+            border: 1px solid #00ffff;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1/1;
+        }
+        .grid-cell {
+            background: #001a1a;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-family: var(--font-family-mono);
+            transition: all 0.3s ease;
+        }
+        .grid-cell.hidden { background: #333; color: #666; }
+        .grid-cell.revealed { background: #001a1a; border: 1px solid #004d4d; }
+        .grid-cell.rover { background: #00ff00; color: #0a0a0a; box-shadow: 0 0 15px rgba(0, 255, 0, 0.8); animation: pulse 2s infinite; z-index: 10; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .grid-cell.objective-H { color: #39c5cf; text-shadow: 0 0 5px #39c5cf; }
+        .grid-cell.objective-M { color: #e3b341; text-shadow: 0 0 5px #e3b341; }
+        .grid-cell.objective-A { color: #56d364; text-shadow: 0 0 5px #56d364; }
+
+        .map-legend {
+            margin-top: 1rem; padding: 0.5rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; border-top: 1px solid #004d4d;
+        }
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+        .legend-symbol { width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-family: var(--font-family-mono); font-size: 1.2rem; font-weight: bold; border-radius: 4px; }
+        .legend-symbol.rover { background-color: #00ff00; color: #0a0a0a; }
+        .legend-symbol.objective-H { color: #39c5cf; border: 1px solid #39c5cf;}
+        .legend-symbol.objective-M { color: #e3b341; border: 1px solid #e3b341;}
+        .legend-symbol.objective-A { color: #56d364; border: 1px solid #56d364;}
+        .legend-symbol.hidden { background-color: #333; color: #666; }
+        .legend-text { font-family: var(--font-family-base); color: #ccc; font-size: 0.9rem; }
+
+        .command-bank h3, .sequence-area h3 { color: #00ffff; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        .command-blocks { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .command-block {
+            background: rgba(0, 255, 255, 0.1); border: 1px solid #00ffff; padding: 0.5rem 1rem; border-radius: 4px;
+            color: #00ffff; cursor: grab; user-select: none; transition: all 0.3s ease;
+            font-size: 1.1rem; font-family: var(--font-family-mono);
+        }
+        .command-block:hover { background: rgba(0, 255, 255, 0.2); box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+        .command-block.dragging { opacity: 0.5; }
+
+        .sequence-container { border: 2px dashed #004d4d; border-radius: 4px; position: relative; flex-grow: 1; }
+        #sequence-area { min-height: 200px; height: 100%; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; overflow-y: auto; }
+        .sequence-area-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #666; pointer-events: none; padding: 1rem; }
+        .sequence-area-placeholder span { display: block; font-size: 1rem; margin-bottom: 0.5rem; }
+        .sequence-area-placeholder .drop-hint { font-size: 0.8rem; opacity: 0.7; }
+        
+        .sequence-item {
+            position: relative;
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            cursor: move;
+        }
+
+        .param-input, .param-select {
+            background: rgba(0, 0, 0, 0.5); border: 1px solid #00ff00; color: #ffff00;
+            padding: 0.25rem; border-radius: 2px;
+            font-family: var(--font-family-mono); font-size: 1.1rem; width: 100px;
+        }
+        .param-select { appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2300FF00%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat; background-position: right .5rem center; background-size: .65em auto; padding-right: 2rem; }
+        
+        .remove-btn {
+            position: absolute; top: -8px; right: -8px;
+            width: 20px; height: 20px;
+            background-color: #ff3838; color: white;
+            border: 1px solid white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 14px; font-weight: bold;
+            line-height: 1; transition: transform 0.2s;
+        }
+        .remove-btn:hover { transform: scale(1.2); }
+        .placeholder { height: 50px; background-color: rgba(0, 255, 255, 0.1); border: 2px dashed #00ffff; border-radius: 4px; }
+
+        .execution-controls { display: flex; gap: 1rem; margin-top: auto; padding-top: 1rem; }
+        
+        .btn {
+            padding: 0.75rem 1.5rem; border: 2px solid; border-radius: 4px;
+            background: transparent; font-family: var(--font-family-base); font-size: 1rem;
+            cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; font-weight: bold;
+        }
+        .btn--primary { border-color: #00ffff; color: #00ffff; }
+        .btn--primary:hover:not(:disabled) { background: rgba(0, 255, 255, 0.1); box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
+        .btn--secondary { border-color: #00ff00; color: #00ff00; }
+        .btn--secondary:hover { background: rgba(0, 255, 0, 0.1); box-shadow: 0 0 20px rgba(0, 255, 0, 0.5); }
+        .btn--large { padding: 1rem 2rem; font-size: 1.2rem; width: 100%; }
+        .btn:disabled { border-color: #666; color: #666; cursor: not-allowed; }
+
+        .metric { background: rgba(0, 20, 20, 0.6); border: 1px solid #004d4d; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
+        .metric-label { color: #00ffff; font-size: 1rem; margin-bottom: 0.5rem; }
+        .metric-value { font-size: 2.5rem; color: #00ff00; text-shadow: 0 0 10px rgba(0, 255, 0, 0.6); font-weight: bold; }
+        .metric-value.stars { font-size: 2rem; letter-spacing: 0.25rem; }
+        .star { color: #666; transition: color 0.3s ease; }
+        .star.filled { color: #ffff00; text-shadow: 0 0 10px rgba(255, 255, 0, 0.8); }
+
+        .objectives-checklist { border-top: 1px solid #004d4d; padding-top: 1rem; margin-top: 1rem; }
+        .objectives-checklist h3 { color: #00ffff; margin-bottom: 1rem; font-size: 1.1rem; }
+        .objective-item { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; transition: color 0.3s ease; }
+        .objective-status { color: #666; font-size: 1.2rem; transition: all 0.3s ease; }
+        .objective-text { color: #ccc; }
+        .objective-item.completed .objective-status { color: #00ff00; text-shadow: 0 0 5px rgba(0, 255, 0, 0.6); }
+        .objective-item.completed .objective-text { color: #00ff00; }
+
+        .modal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            display: flex; align-items: center; justify-content: center; 
+            z-index: 2000; transition: opacity 0.3s; 
+            background: rgba(0,0,0,0.8);
+        }
+        .modal.hidden { opacity: 0; pointer-events: none; }
+        .modal-content { 
+            background: rgba(0, 20, 20, 0.95); border: 2px solid #00ffff; border-radius: 8px; 
+            padding: 2rem; max-width: 600px; width: 90%; 
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+            text-align: center;
+        }
+        .tutorial-highlight {
+            outline: 3px solid #00ffff;
+            box-shadow: 0 0 25px #00ffff;
+            border-radius: 8px;
+            z-index: 2001;
+            position: relative;
+        }
+        .tutorial-header h2 { color: #00ffff; margin-bottom: 1rem; }
+        .tutorial-body p { color: #ccc; line-height: 1.6; margin-bottom: 2rem; font-size: 1.1rem; }
+        .tutorial-footer { display: flex; gap: 1rem; justify-content: space-between; align-items: center; }
+        .tutorial-step-counter { color: #666; }
+        .btn--outline { border-color: #666; color: #666; }
+        .btn--outline:hover { border-color: #999; color: #999; }
+        
+        .final-screen .modal-content-inner { display: flex; flex-direction: column; gap: 1.5rem; }
+        .final-screen p { color: #00ff00; line-height: 1.8; font-size: 1.2rem; text-shadow: 0 0 5px rgba(0, 255, 0, 0.6); white-space: pre-wrap; margin: 0; }
+        
+        .final-stats { border-top: 1px solid #004d4d; padding-top: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .stat-item { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .stat-label { color: #ccc; font-size: 1rem; margin-bottom: 0.5rem; text-transform: uppercase; }
+        .stat-value { color: #00ffff; font-family: var(--font-family-mono); font-size: 3rem; font-weight: bold; }
+        .final-actions { display: flex; gap: 1rem; justify-content: center; }
+
+
+        @media (max-width: 1024px) {
+            body { overflow: auto; height: auto; }
+            .main-content { flex-direction: column; }
+            .header-content { flex-direction: column; align-items: flex-start; }
+            .mission-timer { align-self: flex-start; margin-top: 0.5rem; font-size: 3rem; }
+        }
+    </style>
 </head>
 <body>
-    <!-- Tutorial Modal -->
-    <div id="tutorial-modal" class="modal">
-        <div class="modal-content">
-            <div class="tutorial-header">
-                <h2 id="tutorial-title">Tutorial - Paso 1/7</h2>
+    <header class="app-header">
+        <div class="header-content">
+            <div class="header-text">
+                <h1 class="mission-title">Misión 2: Calibración de Secuencia</h1>
+                <div class="mission-subtitle">Especialista en Operaciones de Campo</div>
             </div>
-            <div class="tutorial-body">
-                <p id="tutorial-description">Cargando tutorial...</p>
+            <div id="mission-timer" class="mission-timer">00:00:00</div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="panel tactical-panel" id="tactical-panel">
+            <div class="panel-header"><h2>VISOR TÁCTICO</h2><div class="panel-status">EN LÍNEA</div></div>
+            <div class="panel-body">
+                <div class="grid-container"><div id="tactical-grid" class="tactical-grid"></div></div>
+                <div class="map-legend">
+                    <div class="legend-item"><span class="legend-symbol rover">►</span><span class="legend-text">A.U.R.O.R.A.</span></div>
+                    <div class="legend-item"><span class="legend-symbol objective-H">H</span><span class="legend-text">Muestra Hielo</span></div>
+                    <div class="legend-item"><span class="legend-symbol objective-M">M</span><span class="legend-text">Muestra Mineral</span></div>
+                    <div class="legend-item"><span class="legend-symbol objective-A">A</span><span class="legend-text">Estación Análisis</span></div>
+                    <div class="legend-item"><span class="legend-symbol hidden">?</span><span class="legend-text">Terreno Oculto</span></div>
+                </div>
             </div>
-            <div class="tutorial-footer">
-                <button id="tutorial-prev" class="btn btn--secondary">← Anterior</button>
+        </section>
+
+        <section class="panel sequencer-panel" id="sequencer-panel">
+            <div class="panel-header"><h2>SECUENCIADOR DE COMANDOS</h2><div class="panel-status">PLANIFICACIÓN ACTIVA</div></div>
+            <div class="panel-body">
+                <div class="command-bank" id="command-bank"><h3>Banco de Comandos</h3><div id="command-blocks" class="command-blocks"></div></div>
+                <div class="sequence-area" style="display: flex; flex-direction: column; flex-grow: 1;">
+                    <h3>Secuencia Algorítmica</h3>
+                    <div class="sequence-container"><div id="sequence-area"></div></div>
+                </div>
+                <div class="execution-controls">
+                    <button id="execute-button" class="btn btn--primary btn--large">[ VALIDAR Y EJECUTAR ]</button>
+                    <button id="clear-button" class="btn btn--secondary">Limpiar Secuencia</button>
+                </div>
+            </div>
+        </section>
+        
+        <section class="panel status-panel" id="status-panel">
+            <div class="panel-header"><h2>ANÁLISIS DE EFICIENCIA</h2><div class="panel-status">MONITOREANDO</div></div>
+            <div class="panel-body">
+                <div class="metric"><div class="metric-label">Comandos Usados</div><div id="steps-counter" class="metric-value">0</div></div>
+                <div class="metric"><div class="metric-label">Puntuación de Eficiencia</div>
+                    <div id="score-display" class="metric-value stars">
+                        <span class="star">☆</span><span class="star">☆</span><span class="star">☆</span>
+                    </div>
+                </div>
+                <div class="objectives-checklist">
+                    <h3>Objetivos de Misión</h3>
+                    <div class="objective-item" id="obj-map"><span class="objective-status">◯</span><span class="objective-text">Mapear terreno</span></div>
+                    <div class="objective-item" id="obj-ice"><span class="objective-status">◯</span><span class="objective-text">Recoger muestra de hielo</span></div>
+                    <div class="objective-item" id="obj-mineral"><span class="objective-status">◯</span><span class="objective-text">Recoger muestra mineral</span></div>
+                    <div class="objective-item" id="obj-station"><span class="objective-status">◯</span><span class="objective-text">Llegar a estación de análisis</span></div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <div id="tutorial-modal" class="modal"><div class="modal-content">
+        <div class="tutorial-header"><h2 id="tutorial-title"></h2></div>
+        <div class="tutorial-body"><p id="tutorial-description"></p></div>
+        <div class="tutorial-footer">
+            <span id="tutorial-step-counter" class="tutorial-step-counter"></span>
+            <div>
+                <button id="tutorial-skip" class="btn btn--outline">Saltar</button>
                 <button id="tutorial-next" class="btn btn--primary">Siguiente →</button>
-                <button id="tutorial-skip" class="btn btn--outline">Saltar Tutorial</button>
             </div>
         </div>
-    </div>
-
-    <!-- Final Message Modal -->
-    <div id="final-modal" class="modal hidden">
-        <div class="modal-content final-screen">
-            <div class="glitch-container">
-                <h2 class="final-title">MISIÓN CUMPLIDA</h2>
-                <div class="transmission-text">
-                    <p id="final-message-text"></p>
+    </div></div>
+    
+    <div id="feedback-modal" class="modal hidden"><div class="modal-content">
+        <h2 id="feedback-title" style="margin-bottom: 1rem;"></h2>
+        <p id="feedback-text" style="color: #ccc; margin-bottom: 1.5rem;"></p>
+        <button id="feedback-close" class="btn btn--primary">Entendido</button>
+    </div></div>
+    
+    <div id="final-screen" class="modal final-screen hidden"><div class="modal-content">
+        <div class="modal-content-inner" id="final-content-to-capture">
+            <h2 style="color: #00ffff;">MISIÓN CUMPLIDA</h2>
+            <p id="final-text"></p>
+            <div class="final-stats">
+                <div class="stat-item">
+                    <div class="stat-label">Tiempo Final</div>
+                    <div class="stat-value" id="final-time-value">00:00:00</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Comandos Utilizados</div>
+                    <div class="stat-value" id="final-commands-value">0</div>
                 </div>
             </div>
-            <button id="final-close" class="btn btn--primary final-btn">Continuar</button>
         </div>
-    </div>
+        <div class="final-actions" style="margin-top: 2rem;">
+            <button id="screenshot-btn" class="btn btn--primary">[ CAPTURAR REPORTE ]</button>
+        </div>
+    </div></div>
 
-    <!-- Main Application -->
-    <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <!-- Contenedor para título y subtítulo -->
-                <div class="header-text">
-                    <h1 class="mission-title">Misión 2: Calibración de Secuencia</h1>
-                    <div class="mission-subtitle">Especialista en Operaciones de Campo - Nivel Secundaria</div>
-                </div>
-                <!-- CAMBIO: Cronómetro añadido -->
-                <div id="mission-timer" class="mission-timer">00:00</div>
-            </div>
-            <div class="status-indicators-wrapper">
-                <div class="status-indicators">
-                    <span class="status-led active" id="system-status">SISTEMA</span>
-                    <span class="status-led" id="connection-status">CONEXIÓN</span>
-                    <span class="status-led" id="mission-status">MISIÓN</span>
-                </div>
-            </div>
-        </header>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const audioManager = {
+                sounds: {},
+                init() {
+                    this.sounds.click = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU0aT19RA+gA5wH2AP8A/wD/AP0A9gDbAOMA8gD3APwA/AD8APQA6gDDAHwAegCIAJoAkgBvAFoANgAIAAAABQAKAB8ANwBEAEwAUgBRAEIAOwAwABwAFgAKAAAAAAD//w==');
+                    this.sounds.drop = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU0aT19RA+gA5wH2AP8A/wD/AP0A9gDbAOMA8gD3APwA/AD8APQA6gDDAHwAegCIAJoAkgBvAFoANgAIAAAABQAKAB8ANwBEAEwAUgBRAEIAOwAwABwAFgAKAAAAAAD//w==');
+                    this.sounds.move = new Audio('data:audio/wav;base64,UklGRkAIAABXQVZFZm10IBAAAAABAAEAwF0AAIC7AAACABAAZGF0YQQIAAAA//8AAP8=');
+                    this.sounds.turn = new Audio('data:audio/wav;base64,UklGRlYIAABXQVZFZm10IBAAAAABAAEAwF0AAIC7AAACABAAZGF0YVIAAAAAAIA/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A=');
+                    this.sounds.scan = new Audio('data:audio/wav;base64,UklGRoAIAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVwIAACAgIA/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A/gD+AP4A=');
+                    this.sounds.collect = new Audio('data:audio/wav;base64,UklGRnwIAABXQVZFZm10IBAAAAABAAEAwF0AAIC7AAACABAAZGF0YbAIAAAAAP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A=');
+                    this.sounds.success = new Audio('data:audio/wav;base64,UklGRqAIAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YWwIAAAA//8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A/wD/AP8A=');
+                    this.sounds.error = new Audio('data:audio/wav;base64,UklGRpAIAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YWgIAAAAgD+APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8APwA/AD8A=');
+                    this.sounds.screenshot = new Audio('data:audio/wav;base64,UklGRkIBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YRgBAACA/z9//v8+v/7/Pr/+/////v7+/v7+/v7+/g==');
+                    Object.values(this.sounds).forEach(sound => { sound.volume = 0.4; });
+                },
+                play(soundName) { if (this.sounds[soundName]) { this.sounds[soundName].currentTime = 0; this.sounds[soundName].play(); } }
+            };
+            audioManager.init();
 
-        <!-- Main Content -->
-        <main class="main-content" id="main-content">
-            <!-- Left Panel - Tactical Map -->
-            <section class="panel tactical-panel" id="tactical-map">
-                <div class="panel-header">
-                    <h2>VISOR TÁCTICO</h2>
-                    <div class="panel-status">MAPEANDO TERRENO</div>
-                </div>
-                <div class="panel-body">
-                    <div class="grid-container">
-                        <div class="tactical-grid" id="tactical-grid"></div>
-                    </div>
-                    <div class="map-legend">
-                        <div class="legend-item">
-                            <span class="legend-symbol rover">R</span>
-                            <span class="legend-text">A.U.R.O.R.A.</span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-symbol objective ice">H</span>
-                            <span class="legend-text">Hielo</span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-symbol objective mineral">M</span>
-                            <span class="legend-text">Mineral</span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-symbol objective station">A</span>
-                            <span class="legend-text">Estación</span>
-                        </div>
-                        <div class="legend-item">
-                            <span class="legend-symbol hidden">?</span>
-                            <span class="legend-text">Terreno Oculto</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            const GRID_SIZE = 12;
+            const gameConfig = {
+                map: [
+                    'S???????????', '?H??????M???', '????????????', '????????????',
+                    '????????????', '????????????', '????????????', '????????????',
+                    '????????????', '????????????', '????????????', '??????????A?',
+                ],
+                roverStart: { x: 0, y: 0, dir: 'E' },
+                scoreThresholds: { perfect: 15, good: 20 },
+                commands: [
+                    { name: 'avanzar', param: 'pasos', default: '5' }, { name: 'girar', param: 'direccion', default: 'derecha' },
+                    { name: 'mapearTerreno', param: null }, { name: 'recogerMuestra', param: 'tipo', default: 'hielo' },
+                    { name: 'analizarMuestras', param: null }, { name: 'enviarReporte', param: null }
+                ]
+            };
+            
+            let gameState = {};
+            let timerInterval = null;
+            const DIRS = { 'N': {x:0,y:-1,s:'▲'}, 'E': {x:1,y:0,s:'►'}, 'S': {x:0,y:1,s:'▼'}, 'W': {x:-1,y:0,s:'◄'} };
+            const DIR_SEQ = ['N', 'E', 'S', 'W'];
 
-            <!-- Center Panel - Command Sequencer -->
-            <section class="panel sequencer-panel" id="sequencer">
-                <div class="panel-header">
-                    <h2>SECUENCIADOR DE COMANDOS</h2>
-                    <div class="panel-status">PLANIFICACIÓN ACTIVA</div>
-                </div>
-                <div class="panel-body">
-                    <div class="command-bank" id="command-bank">
-                        <h3>Banco de Comandos</h3>
-                        <div class="command-blocks" id="command-blocks">
-                            <!-- Command blocks will be generated by JavaScript -->
-                        </div>
-                    </div>
-                    
-                    <div class="sequence-area">
-                        <h3>Secuencia Algorítmica</h3>
-                        <div class="sequence-container" id="sequence-container">
-                            <div class="drop-zone" id="drop-zone">
-                                <div class="drop-message">
-                                    <span>Arrastra los comandos aquí para crear tu secuencia</span>
-                                    <div class="drop-hint">Los comandos se ejecutarán de arriba hacia abajo</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="execution-controls">
-                        <button id="execute-btn" class="btn btn--primary btn--large">[ VALIDAR Y EJECUTAR ]</button>
-                        <button id="clear-sequence" class="btn btn--secondary">Limpiar Secuencia</button>
-                    </div>
-                </div>
-            </section>
+            const dom = {
+                grid: document.getElementById('tactical-grid'), commandBank: document.getElementById('command-blocks'),
+                sequenceArea: document.getElementById('sequence-area'), executeBtn: document.getElementById('execute-button'),
+                clearBtn: document.getElementById('clear-button'), stepsCounter: document.getElementById('steps-counter'),
+                scoreDisplay: document.getElementById('score-display'), timer: document.getElementById('mission-timer'),
+            };
 
-            <!-- Right Panel - Status and Scoring -->
-            <section class="panel status-panel" id="status-panel">
-                <div class="panel-header">
-                    <h2>ANÁLISIS DE EFICIENCIA</h2>
-                    <div class="panel-status">MONITOREANDO</div>
-                </div>
-                <div class="panel-body">
-                    <div class="status-metrics">
-                        <div class="metric">
-                            <div class="metric-label">Pasos Usados</div>
-                            <div class="metric-value" id="steps-used">0</div>
-                        </div>
+            function init() {
+                resetGameState();
+                renderCommandBank();
+                renderGrid();
+                setupEventListeners();
+                startTutorial();
+            }
+
+            function resetGameState() {
+                gameState = {
+                    rover: { ...gameConfig.roverStart }, map: gameConfig.map.map(r => r.split('')),
+                    revealed: Array(GRID_SIZE).fill(0).map(() => Array(GRID_SIZE).fill(false)),
+                    collected: { H: false, M: false }, objectives: { map: false, ice: false, mineral: false, station: false },
+                    isExecuting: false, missionSuccess: false, missionStartTime: 0, finalTime: '00:00:00', finalCommands: 0,
+                };
+                dom.sequenceArea.innerHTML = `<div class="sequence-area-placeholder"><span>Arrastra los comandos aquí para crear tu secuencia.</span><div class="drop-hint">Los comandos se ejecutarán de arriba hacia abajo</div></div>`;
+                updateStatusPanel();
+                updateObjectivesChecklist();
+                updateTimerDisplay();
+            }
+
+            function renderGrid() {
+                dom.grid.innerHTML = '';
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    for (let x = 0; x < GRID_SIZE; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'grid-cell';
+                        const isRover = gameState.rover.x === x && gameState.rover.y === y;
+                        const tile = gameState.map[y][x];
                         
-                        <div class="metric">
-                            <div class="metric-label">Puntuación de Eficiencia</div>
-                            <div class="metric-value stars" id="efficiency-stars">
-                                <span class="star">☆</span>
-                                <span class="star">☆</span>
-                                <span class="star">☆</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="objectives-checklist">
-                        <h3>Objetivos de Misión</h3>
-                        <div class="objective-item" id="obj-map">
-                            <span class="objective-status">◯</span>
-                            <span class="objective-text">Mapear terreno oculto</span>
-                        </div>
-                        <div class="objective-item" id="obj-ice">
-                            <span class="objective-status">◯</span>
-                            <span class="objective-text">Recoger muestra de hielo</span>
-                        </div>
-                        <div class="objective-item" id="obj-mineral">
-                            <span class="objective-status">◯</span>
-                            <span class="objective-text">Recoger muestra mineral</span>
-                        </div>
-                        <div class="objective-item" id="obj-analyze">
-                            <span class="objective-status">◯</span>
-                            <span class="objective-text">Llegar a estación análisis</span>
-                        </div>
-                    </div>
-                    
-                    <div class="feedback-area" id="feedback-area">
-                        <div class="feedback-message hidden" id="feedback-message"></div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
+                        if (gameState.revealed[y][x] || isRover) {
+                            if(isRover) gameState.revealed[y][x] = true;
+                            cell.classList.add('revealed');
+                            if (tile === 'W') cell.style.backgroundColor = '#004d4d';
+                            else if (tile !== '?' && tile !== 'S') {
+                                cell.classList.add(`objective-${tile}`);
+                                cell.textContent = tile;
+                            }
+                        } else {
+                            cell.classList.add('hidden');
+                            cell.textContent = '?';
+                        }
+                        if (isRover) {
+                            cell.classList.add('rover');
+                            cell.textContent = DIRS[gameState.rover.dir].s;
+                        }
+                        dom.grid.appendChild(cell);
+                    }
+                }
+            }
+            
+            function renderCommandBank() {
+                dom.commandBank.innerHTML = '';
+                gameConfig.commands.forEach(cmd => {
+                    const block = document.createElement('div');
+                    block.className = 'command-block';
+                    block.dataset.command = cmd.name;
+                    block.dataset.paramType = cmd.param;
+                    block.dataset.paramDefault = cmd.default || '';
+                    block.textContent = `${cmd.name}(${cmd.param ? '…' : ''})`;
+                    block.draggable = true;
+                    dom.commandBank.appendChild(block);
+                });
+            }
 
-    <script src="app.js"></script>
+            function createSequenceItem(cmdData) {
+                const item = document.createElement('div');
+                item.className = 'command-block sequence-item';
+                item.dataset.command = cmdData.command;
+                item.draggable = true;
+
+                let html = `<span>${cmdData.command}(</span>`;
+                if (cmdData.command === 'girar') {
+                    html += `<select class="param-select"><option value="derecha">derecha</option><option value="izquierda">izquierda</option></select>`;
+                } else if (cmdData.command === 'recogerMuestra') {
+                    html += `<select class="param-select"><option value="hielo">hielo</option><option value="mineral">mineral</option></select>`;
+                } else if (cmdData.paramType) {
+                    html += `<input type="text" class="param-input" value="${cmdData.paramDefault}" placeholder="${cmdData.paramType}">`;
+                }
+                html += `<span>)</span>`;
+                html += `<button class="remove-btn">×</button>`;
+                item.innerHTML = html;
+                return item;
+            }
+
+            function updateStatusPanel() {
+                const commandCount = dom.sequenceArea.querySelectorAll('.sequence-item').length;
+                dom.stepsCounter.textContent = commandCount;
+                updateScoreDisplay(0);
+            }
+
+            function updateScoreDisplay(stars) {
+                const starElements = dom.scoreDisplay.querySelectorAll('.star');
+                starElements.forEach((star, i) => { star.classList.toggle('filled', i < stars); star.textContent = i < stars ? '★' : '☆'; });
+            }
+            
+            function updateObjectivesChecklist() {
+                for (const key in gameState.objectives) {
+                    const element = document.getElementById(`obj-${key}`);
+                    if (element) {
+                        const completed = gameState.objectives[key];
+                        element.classList.toggle('completed', completed);
+                        element.querySelector('.objective-status').textContent = completed ? '●' : '◯';
+                    }
+                }
+            }
+
+            async function executeSequence() {
+                if (gameState.isExecuting) return;
+                gameState.isExecuting = true;
+                dom.executeBtn.disabled = true;
+                dom.executeBtn.textContent = '[ EJECUTANDO... ]';
+                resetForRun();
+                renderGrid();
+                await sleep(500);
+
+                const commands = Array.from(dom.sequenceArea.querySelectorAll('.sequence-item'));
+                for (const el of commands) {
+                    const name = el.dataset.command;
+                    const input = el.querySelector('.param-input, .param-select');
+                    const param = input ? input.value.trim().toLowerCase() : null;
+                    let result;
+                    switch (name) {
+                        case 'avanzar': result = await handleAvanzar(parseInt(param, 10)); break;
+                        case 'girar': result = await handleGirar(param); break;
+                        case 'mapearTerreno': result = await handleMapear(); break;
+                        case 'recogerMuestra': result = await handleRecoger(param); break;
+                        case 'analizarMuestras': result = { success: true }; await sleep(200); break;
+                        case 'enviarReporte': result = await handleEnviarReporte(); break;
+                        default: result = { success: false, message: 'Comando desconocido.' };
+                    }
+                    if (!result.success) {
+                        showFeedback("Error Lógico", result.message);
+                        audioManager.play('error'); resetAfterExecution(); return;
+                    }
+                }
+                if (!gameState.missionSuccess) {
+                    showFeedback("Secuencia Incompleta", "No se cumplieron todos los objetivos.");
+                    audioManager.play('error');
+                }
+                resetAfterExecution();
+            }
+
+            function resetForRun() {
+                gameState.rover = { ...gameConfig.roverStart };
+                gameState.revealed.forEach(row => row.fill(false));
+                gameState.collected = { H: false, M: false };
+                gameState.objectives = { map: false, ice: false, mineral: false, station: false };
+                gameState.missionSuccess = false;
+                gameState.map = gameConfig.map.map(r => r.split(''));
+                updateObjectivesChecklist();
+            }
+            function resetAfterExecution() {
+                gameState.isExecuting = false;
+                dom.executeBtn.disabled = false;
+                dom.executeBtn.textContent = '[ VALIDAR Y EJECUTAR ]';
+            }
+
+            async function handleAvanzar(steps) {
+                if (isNaN(steps) || steps <= 0) return { success: false, message: 'Parámetro inválido para avanzar().' };
+                for (let i = 0; i < steps; i++) {
+                    const { x: dx, y: dy } = DIRS[gameState.rover.dir];
+                    const nextX = gameState.rover.x + dx;
+                    const nextY = gameState.rover.y + dy;
+                    if (nextX < 0 || nextX >= GRID_SIZE || nextY < 0 || nextY >= GRID_SIZE) return { success: false, message: 'Colisión: Límite del mapa.' };
+                    if (!gameState.revealed[nextY][nextX]) return { success: false, message: 'Peligro: Terreno oculto.' };
+                    if (gameState.map[nextY][nextX] === 'W') return { success: false, message: 'Colisión: Obstáculo.' };
+                    gameState.rover.x = nextX;
+                    gameState.rover.y = nextY;
+                    audioManager.play('move'); renderGrid(); await sleep(150);
+                }
+                return { success: true };
+            }
+
+            async function handleGirar(dir) {
+                const idx = DIR_SEQ.indexOf(gameState.rover.dir);
+                if (dir === 'derecha') gameState.rover.dir = DIR_SEQ[(idx + 1) % 4];
+                else if (dir === 'izquierda') gameState.rover.dir = DIR_SEQ[(idx + 3) % 4];
+                else return { success: false, message: 'Parámetro inválido para girar().' };
+                audioManager.play('turn'); renderGrid(); await sleep(200);
+                return { success: true };
+            }
+
+            async function handleMapear() {
+                for (let y = 0; y < GRID_SIZE; y++) { for (let x = 0; x < GRID_SIZE; x++) { gameState.revealed[y][x] = true; } }
+                gameState.objectives.map = true;
+                updateObjectivesChecklist();
+                audioManager.play('scan'); renderGrid(); await sleep(500);
+                return { success: true };
+            }
+
+            async function handleRecoger(tipo) {
+                const { x, y } = gameState.rover;
+                const tile = gameState.map[y][x];
+                if (tipo === 'hielo' && tile === 'H') {
+                    gameState.collected.H = true; gameState.objectives.ice = true; gameState.map[y][x] = '?';
+                } else if (tipo === 'mineral' && tile === 'M') {
+                    if (!gameState.collected.H) return { success: false, message: 'Error: Recoge el Hielo (H) primero.' };
+                    gameState.collected.M = true; gameState.objectives.mineral = true; gameState.map[y][x] = '?';
+                } else {
+                    return { success: false, message: `No se puede recoger "${tipo}" aquí.` };
+                }
+                updateObjectivesChecklist();
+                audioManager.play('collect'); renderGrid(); await sleep(200);
+                return { success: true };
+            }
+
+            async function handleEnviarReporte() {
+                const { x, y } = gameState.rover;
+                if (gameState.map[y][x] === 'A' && gameState.collected.H && gameState.collected.M) {
+                    gameState.missionSuccess = true; gameState.objectives.station = true;
+                    updateObjectivesChecklist();
+                    stopTimer();
+                    const commandCount = dom.sequenceArea.querySelectorAll('.sequence-item').length;
+                    gameState.finalCommands = commandCount;
+                    let stars = 1;
+                    if (commandCount <= gameConfig.scoreThresholds.perfect) stars = 3;
+                    else if (commandCount <= gameConfig.scoreThresholds.good) stars = 2;
+                    updateScoreDisplay(stars);
+                    showFeedback("Transmisión Exitosa", `¡Misión completada con ${stars} estrellas!`);
+                    audioManager.play('success');
+                    if (stars === 3) setTimeout(showFinalScreen, 1000);
+                    return { success: true };
+                }
+                return { success: false, message: 'Verifica tu ubicación y las muestras.' };
+            }
+
+            function showFeedback(title, message) {
+                document.getElementById('feedback-title').textContent = title;
+                document.getElementById('feedback-text').textContent = message;
+                document.getElementById('feedback-modal').classList.remove('hidden');
+            }
+
+            function showFinalScreen() {
+                document.getElementById('final-text').textContent = "Lo has conseguido, Especialista. La secuencia es perfecta. A.U.R.O.R.A. ha ejecutado las órdenes sin fallos...";
+                document.getElementById('final-time-value').textContent = gameState.finalTime;
+                document.getElementById('final-commands-value').textContent = gameState.finalCommands;
+                document.getElementById('final-screen').classList.remove('hidden');
+            }
+
+            function startTimer() {
+                if (timerInterval) return;
+                gameState.missionStartTime = Date.now();
+                timerInterval = setInterval(updateTimerDisplay, 47);
+            }
+            function stopTimer() {
+                gameState.finalTime = dom.timer.textContent;
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            function updateTimerDisplay() {
+                const elapsed = gameState.missionStartTime > 0 ? Date.now() - gameState.missionStartTime : 0;
+                const minutes = String(Math.floor(elapsed / 60000)).padStart(2, '0');
+                const seconds = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
+                const milliseconds = String(elapsed % 1000).padStart(3, '0').substring(0,2);
+                dom.timer.textContent = `${minutes}:${seconds}:${milliseconds}`;
+            }
+            
+            // --- CAMBIO: Contenido del tutorial mejorado ---
+            const tutorialSteps = [
+                { el: '.app-header', title: 'Nueva Misión: Calibración de Secuencia', desc: 'Especialista, esta misión es más compleja. Tu eficiencia será clave: el sistema medirá cada comando que uses. ¡Planifica con cuidado para obtener la máxima puntuación!' },
+                { el: '#tactical-panel', title: 'Paso 2: Visor Táctico', desc: '¡Atención al visor! Debes guiar a A.U.R.O.R.A. para recoger el Hielo (H), luego el Mineral (M), y finalmente llegar a la Estación de Análisis (A). ¡El orden es crítico!' },
+                { el: '#command-bank', title: 'Paso 3: Banco de Comandos', desc: 'Usa el comando `mapearTerreno()` para revelar el mapa. Luego, arrastra los comandos de movimiento y recolección para construir tu algoritmo.' },
+                { el: '#sequencer-panel .sequence-container', title: 'Paso 4: Secuencia Algorítmica', desc: 'Aquí armas tu plan. Puedes reordenar los comandos arrastrándolos y eliminarlos con la "×" roja. Los comandos con opciones (▼) te permiten elegir parámetros.' },
+                { el: '#status-panel', title: 'Paso 5: Panel de Eficiencia', desc: 'El éxito no es suficiente. Este panel mide cuántos comandos usas. Un algoritmo corto y elegante te dará la puntuación máxima de ★★★. ¡Optimiza cada movimiento!' },
+                { el: '#execute-button', title: 'Paso 6: ¡Ejecutar Misión!', desc: 'Una vez que tu plan esté listo, presiona este botón para ejecutar la secuencia. ¡Buena suerte, Especialista!' }
+            ];
+            let currentTutorialStep = 0;
+            function startTutorial() {
+                document.getElementById('tutorial-modal').classList.remove('hidden');
+                showTutorialStep(0);
+            }
+            function showTutorialStep(idx) {
+                document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+                currentTutorialStep = idx;
+                const step = tutorialSteps[idx];
+                
+                document.getElementById('tutorial-title').textContent = step.title;
+                document.getElementById('tutorial-description').textContent = step.desc;
+                document.getElementById('tutorial-step-counter').textContent = `${idx + 1} / ${tutorialSteps.length}`;
+                
+                const targetEl = document.querySelector(step.el);
+                if (targetEl) {
+                    targetEl.classList.add('tutorial-highlight');
+                }
+
+                const nextBtn = document.getElementById('tutorial-next');
+                nextBtn.textContent = (idx === tutorialSteps.length - 1) ? "¡Comenzar Misión!" : "Siguiente →";
+            }
+            function endTutorial() {
+                document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+                document.getElementById('tutorial-modal').classList.add('hidden');
+                startTimer();
+            }
+
+            function setupEventListeners() {
+                let draggedItem = null;
+                document.addEventListener('dragstart', e => {
+                    const item = e.target.closest('.command-block');
+                    if (item) { draggedItem = item; setTimeout(() => item.classList.add('dragging'), 0); }
+                });
+                document.addEventListener('dragend', e => {
+                    if (draggedItem) { draggedItem.classList.remove('dragging'); draggedItem = null; document.querySelectorAll('.placeholder').forEach(p => p.remove()); }
+                });
+                dom.sequenceArea.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    const afterElement = getDragAfterElement(dom.sequenceArea, e.clientY);
+                    let placeholder = dom.sequenceArea.querySelector('.placeholder');
+                    if (!placeholder) { placeholder = document.createElement('div'); placeholder.className = 'placeholder'; }
+                    if (afterElement == null) { dom.sequenceArea.appendChild(placeholder); } else { dom.sequenceArea.insertBefore(placeholder, afterElement); }
+                });
+                dom.sequenceArea.addEventListener('drop', e => {
+                    e.preventDefault();
+                    audioManager.play('drop'); if (!draggedItem) return;
+                    const placeholder = dom.sequenceArea.querySelector('.placeholder');
+                    const isFromBank = !draggedItem.classList.contains('sequence-item');
+                    const newItem = isFromBank ? createSequenceItem(draggedItem.dataset) : draggedItem;
+                    if (dom.sequenceArea.querySelector('.sequence-area-placeholder')) { dom.sequenceArea.innerHTML = ''; }
+                    if (placeholder) { dom.sequenceArea.insertBefore(newItem, placeholder); } else { dom.sequenceArea.appendChild(newItem); }
+                    if(placeholder) placeholder.remove();
+                    updateStatusPanel();
+                });
+                dom.sequenceArea.addEventListener('click', e => {
+                    if (e.target.classList.contains('remove-btn')) {
+                        e.target.closest('.sequence-item').remove();
+                        audioManager.play('click');
+                        if (dom.sequenceArea.children.length === 0) {
+                            dom.sequenceArea.innerHTML = `<div class="sequence-area-placeholder"><span>Arrastra los comandos aquí para crear tu secuencia.</span><div class="drop-hint">Los comandos se ejecutarán de arriba hacia abajo</div></div>`;
+                        }
+                        updateStatusPanel();
+                    }
+                });
+                dom.sequenceArea.addEventListener('input', e => { if (e.target.classList.contains('param-input') || e.target.classList.contains('param-select')) { updateStatusPanel(); } });
+                document.querySelectorAll('.btn').forEach(btn => { if(btn.id !== 'screenshot-btn') btn.addEventListener('click', () => audioManager.play('click')); });
+                dom.executeBtn.addEventListener('click', executeSequence);
+                dom.clearBtn.addEventListener('click', () => {
+                    dom.sequenceArea.innerHTML = `<div class="sequence-area-placeholder"><span>Arrastra los comandos aquí para crear tu secuencia.</span><div class="drop-hint">Los comandos se ejecutarán de arriba hacia abajo</div></div>`;
+                    updateStatusPanel();
+                });
+                document.getElementById('tutorial-next').addEventListener('click', () => { if (currentTutorialStep < tutorialSteps.length - 1) showTutorialStep(currentTutorialStep + 1); else endTutorial(); });
+                document.getElementById('tutorial-skip').addEventListener('click', endTutorial);
+                document.getElementById('feedback-close').addEventListener('click', () => { document.getElementById('feedback-modal').classList.add('hidden'); });
+                
+                document.getElementById('screenshot-btn').addEventListener('click', () => {
+                    audioManager.play('screenshot');
+                    const captureNode = document.getElementById('final-content-to-capture');
+                    const actionNode = document.querySelector('.final-actions');
+                    actionNode.style.display = 'none';
+                    html2canvas(captureNode, { backgroundColor: '#001414' }).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = 'AURORA_Mision_Cumplida.png';
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                        actionNode.style.display = 'flex';
+                    }).catch(() => {
+                        actionNode.style.display = 'flex';
+                    });
+                });
+            }
+
+            function getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.sequence-item:not(.dragging)')];
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+
+            function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+            init();
+        });
+    </script>
 </body>
 </html>
